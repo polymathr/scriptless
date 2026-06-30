@@ -1,0 +1,22 @@
+{
+  "name": "scriptless-root",
+  "version": "3.0.0",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix scriptless/server && npm install --prefix scriptless/web",
+    "dev:server": "npm run dev --prefix scriptless/server",
+    "dev:web": "npm run dev --prefix scriptless/web",
+    "dev": "concurrently --names \"SERVER,WEB\" --prefix-colors \"cyan,magenta\" \"npm run dev:server\" \"npm run dev:web\"",
+    "build:server": "npm run build --prefix scriptless/server",
+    "build:web": "npm run build --prefix scriptless/web",
+    "build": "npm run build:server && npm run build:web",
+    "db:migrate": "npm run db:migrate --prefix scriptless/server",
+    "db:studio": "npm run db:studio --prefix scriptless/server",
+    "db:generate": "npm run db:generate --prefix scriptless/server",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
