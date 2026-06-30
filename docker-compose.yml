@@ -1,0 +1,87 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: scriptless-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: scriptless
+      POSTGRES_PASSWORD: scriptless_dev
+      POSTGRES_DB: scriptless
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scriptless -d scriptless"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: scriptless-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: ./scriptless/server
+      dockerfile: Dockerfile
+    container_name: scriptless-server
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://scriptless:scriptless_dev@postgres:5432/scriptless?schema=public
+      REDIS_URL: redis://redis:6379
+      PORT: 3001
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-in-production}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      TWILIO_SID: ${TWILIO_SID}
+      TWILIO_TOKEN: ${TWILIO_TOKEN}
+      TWILIO_FROM: ${TWILIO_FROM}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./scriptless/server:/app
+      - /app/node_modules
+    command: npm run dev
+
+  web:
+    build:
+      context: ./scriptless/web
+      dockerfile: Dockerfile
+    container_name: scriptless-web
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:3001
+    depends_on:
+      - server
+    volumes:
+      - ./scriptless/web:/app
+      - /app/node_modules
+    command: npm run dev -- --host
+
+volumes:
+  postgres_data:
+  redis_data:
